@@ -1,0 +1,63 @@
+[2m1:04:20 pm[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled error] [1mSvelte error[22m: state_descriptors_fixed
+Property descriptors defined on `$state` objects must contain `value` and always be `enumerable`, `configurable` and `writable`.
+https://svelte.dev/e/state_descriptors_fixed
+
+	in $effect
+	in Chart.svelte
+	in +page.svelte
+	in +layout.svelte
+	in root.svelte
+	in undefined
+
+[39m > state_descriptors_fixed node_modules/svelte/src/internal/client/errors.js:454:16
+ > Object.defineProperty node_modules/svelte/src/internal/client/proxy.js:125:4
+ > listenArrayEvents node_modules/chart.js/dist/chunks/helpers.dataset.js:507:11
+ > ScatterController._dataCheck node_modules/chart.js/dist/chart.js:673:16
+ > ScatterController.addElements node_modules/chart.js/dist/chart.js:681:13
+ > ScatterController.addElements node_modules/chart.js/dist/chart.js:2528:14
+ > ScatterController.initialize node_modules/chart.js/dist/chart.js:605:13
+ > new DatasetController node_modules/chart.js/dist/chart.js:598:13
+ > new ScatterController node_modules/chart.js/dist/chart.js:2458:0
+
+[2m1:04:34 pm[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled error] [1mSvelte error[22m: state_descriptors_fixed
+Property descriptors defined on `$state` objects must contain `value` and always be `enumerable`, `configurable` and `writable`.
+https://svelte.dev/e/state_descriptors_fixed
+
+	in $effect
+	in Chart.svelte
+	in +page.svelte
+	in +layout.svelte
+	in root.svelte
+	in undefined
+
+[39m > state_descriptors_fixed node_modules/svelte/src/internal/client/errors.js:454:16
+ > Object.defineProperty node_modules/svelte/src/internal/client/proxy.js:125:4
+ > listenArrayEvents node_modules/chart.js/dist/chunks/helpers.dataset.js:507:11
+ > ScatterController._dataCheck node_modules/chart.js/dist/chart.js:673:16
+ > ScatterController.addElements node_modules/chart.js/dist/chart.js:681:13
+ > ScatterController.addElements node_modules/chart.js/dist/chart.js:2528:14
+ > ScatterController.initialize node_modules/chart.js/dist/chart.js:605:13
+ > new DatasetController node_modules/chart.js/dist/chart.js:598:13
+ > new ScatterController node_modules/chart.js/dist/chart.js:2458:0
+
+[2m1:08:29 pm[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled error] [1mSvelte error[22m: state_descriptors_fixed
+Property descriptors defined on `$state` objects must contain `value` and always be `enumerable`, `configurable` and `writable`.
+https://svelte.dev/e/state_descriptors_fixed
+
+	in $effect
+	in Chart.svelte
+	in +page.svelte
+	in +layout.svelte
+	in root.svelte
+	in undefined
+
+[39m > state_descriptors_fixed node_modules/svelte/src/internal/client/errors.js:454:16
+ > Object.defineProperty node_modules/svelte/src/internal/client/proxy.js:125:4
+ > listenArrayEvents node_modules/chart.js/dist/chunks/helpers.dataset.js:507:11
+ > BarController._dataCheck node_modules/chart.js/dist/chart.js:673:16
+ > BarController.addElements node_modules/chart.js/dist/chart.js:681:13
+ > BarController.initialize node_modules/chart.js/dist/chart.js:605:13
+ > BarController.initialize node_modules/chart.js/dist/chart.js:1450:14
+ > new DatasetController node_modules/chart.js/dist/chart.js:598:13
+ > new BarController node_modules/chart.js/dist/chart.js:1369:0
+
