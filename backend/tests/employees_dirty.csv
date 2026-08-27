@@ -1,0 +1,11 @@
+name,department,salary,hire_date
+Alice,Engineering,75000,2020-01-15
+Bob,Engineering,,2021-03-10
+Charlie,Sales,52000,2019-11-22
+Diana,Sales,48000,
+Eve,Engineering,82000,2022-05-01
+Frank,Marketing, 61000 ,2020-07-19
+Alice,Engineering,75000,2020-01-15
+Grace,Marketing,,2023-02-11
+Henry,Sales,56000,2021-08-30
+Ivy,Engineering,91000,2018-04-25

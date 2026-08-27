@@ -1,0 +1,21 @@
+product,category,region,sales,quantity,date,price
+Widget A,Electronics,North,150.5,12,2024-01-05,12.5
+Widget B,Electronics,South,89.0,8,2024-01-12,11.1
+Gadget X,Home,East,240.25,20,2024-02-01,12.0
+Widget A,Electronics,West,175.75,15,2024-02-14,11.7
+Gadget Y,Home,North,90.0,6,2024-03-03,15.0
+Widget B,Electronics,East,120.4,10,2024-03-18,12.0
+Gadget X,Home,South,310.0,25,2024-04-02,12.4
+Widget A,Electronics,North,200.0,16,2024-04-20,12.5
+Gadget Y,Home,West,150.5,10,2024-05-05,15.05
+Widget B,Electronics,South,95.2,8,2024-05-27,11.9
+Gadget X,Home,East,280.75,22,2024-06-10,12.76
+Widget A,Electronics,West,165.0,13,2024-06-28,12.69
+Gadget Y,Home,North,70.0,5,2024-07-04,14.0
+Widget B,Electronics,East,135.6,11,2024-07-19,12.33
+Gadget X,Home,South,265.0,20,2024-08-08,13.25
+Widget A,Electronics,North,190.25,15,2024-08-22,12.68
+Gadget Y,Home,West,99.9,7,2024-09-01,14.27
+Widget B,Electronics,South,110.0,9,2024-09-15,12.22
+Gadget X,Home,East,255.5,19,2024-10-03,13.45
+Widget A,Electronics,West,210.75,17,2024-10-18,12.4
