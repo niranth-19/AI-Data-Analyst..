@@ -84,7 +84,37 @@ def ask_question(db: Session, user: User, dataset: Dataset, question: str) -> As
         plan = _fallback_plan(question)
 
     results, chart_spec = execute_plan(df, plan)
-operation = plan.get("operation", "insights")
+    operation = plan.get("operation", "insights")
+
+    # If the question is not about the dataset (schema_info operation),
+    # return a proper "cannot answer from dataset" response
+    if operation == "schema_info":
+        explanation = (
+            "This question cannot be answered from the dataset. "
+            "Please ask a question about the data columns, values, or analysis "
+            "that can be computed from the uploaded dataset."
+        )
+        analysis = Analysis(
+            user_id=user.id,
+            dataset_id=dataset.id,
+            question=question,
+            answer=explanation,
+            analysis_type="schema_info",
+            results=None,
+            chart_spec=None,
+        )
+        db.add(analysis)
+        db.commit()
+        db.refresh(analysis)
+        return AskResponse(
+            analysis_id=analysis.id,
+            question=question,
+            answer=explanation,
+            analysis_type="schema_info",
+            results=None,
+            chart_spec=None,
+            created_at=analysis.created_at,
+        )
 
     # Normalize chart_spec: ensure it's always a dict or None
     if chart_spec is not None:
@@ -92,16 +122,6 @@ operation = plan.get("operation", "insights")
             # Validate minimum structure
             if not isinstance(chart_spec, dict):
                 chart_spec = None
-            elif chart_spec.get("type") is None:
-                chart_spec = None
-            elif chart_spec.get("labels") is None:
-                chart_spec = None
-            elif chart_spec.get("datasets") is None:
-                chart_spec = None
-        except Exception:
-            chart_spec = None
-    else:
-        chart_spec = None
             elif chart_spec.get("type") is None:
                 chart_spec = None
             elif chart_spec.get("labels") is None:
