@@ -1,7 +1,9 @@
-from pathlib import Path
+import io
+import os
 
+import boto3
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_owned_dataset_or_404
@@ -12,35 +14,93 @@ from app.schemas.report import (
     ReportListResponse,
     ReportOut,
 )
-from app.services.pdf_service import generate_report_pdf, get_report_path
+from app.services.pdf_service import generate_report_pdf
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 
-@router.post("", response_model=ReportOut, status_code=status.HTTP_201_CREATED)
+# =========================================================
+# Neon Object Storage configuration
+# =========================================================
+
+S3_BUCKET_NAME = os.getenv(
+    "S3_BUCKET_NAME",
+    "ai-data-analyst-files",
+)
+
+s3_client = boto3.client(
+    "s3",
+    endpoint_url=os.getenv("AWS_ENDPOINT_URL_S3"),
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    region_name=os.getenv(
+        "AWS_REGION",
+        "ap-southeast-1",
+    ),
+)
+
+
+# =========================================================
+# Create Report
+# =========================================================
+
+@router.post(
+    "",
+    response_model=ReportOut,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_report(
     payload: ReportCreateRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    dataset = get_owned_dataset_or_404(payload.dataset_id, user, db)
-    report = generate_report_pdf(db, user, dataset, payload.report_name)
+    dataset = get_owned_dataset_or_404(
+        payload.dataset_id,
+        user,
+        db,
+    )
+
+    report = generate_report_pdf(
+        db,
+        user,
+        dataset,
+        payload.report_name,
+    )
+
     return ReportOut.model_validate(report)
 
 
-@router.get("", response_model=ReportListResponse)
+# =========================================================
+# List Reports
+# =========================================================
+
+@router.get(
+    "",
+    response_model=ReportListResponse,
+)
 def list_reports(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     reports = (
-        db.query(Report).filter(Report.user_id == user.id).order_by(Report.created_at.desc()).all()
+        db.query(Report)
+        .filter(Report.user_id == user.id)
+        .order_by(Report.created_at.desc())
+        .all()
     )
+
     return ReportListResponse(
-        reports=[ReportOut.model_validate(r) for r in reports],
+        reports=[
+            ReportOut.model_validate(r)
+            for r in reports
+        ],
         total=len(reports),
     )
 
+
+# =========================================================
+# Download Report
+# =========================================================
 
 @router.get("/{report_id}/download")
 def download_report(
@@ -50,19 +110,44 @@ def download_report(
 ):
     report = (
         db.query(Report)
-        .filter(Report.id == report_id, Report.user_id == user.id)
+        .filter(
+            Report.id == report_id,
+            Report.user_id == user.id,
+        )
         .first()
     )
+
     if report is None:
-        raise HTTPException(status_code=404, detail="Report not found.")
+        raise HTTPException(
+            status_code=404,
+            detail="Report not found.",
+        )
+
+    # Download the PDF from Neon Object Storage
     try:
-        path: Path = get_report_path(report)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid report path.")
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Report file not found on disk.")
-    return FileResponse(
-        path,
+        response = s3_client.get_object(
+            Bucket=S3_BUCKET_NAME,
+            Key=report.stored_filename,
+        )
+
+        pdf_bytes = response["Body"].read()
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve report: {exc}",
+        )
+
+    filename = (
+        f"{report.report_name.replace(' ', '_')}.pdf"
+    )
+
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
         media_type="application/pdf",
-        filename=f"{report.report_name.replace(' ', '_')}.pdf",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="{filename}"'
+            )
+        },
     )
