@@ -1,7 +1,10 @@
 import csv
 import io
+import os
 import uuid
 from pathlib import Path
+
+import boto3
 
 import pandas as pd
 from fastapi import HTTPException, UploadFile
@@ -11,6 +14,16 @@ from app.core.config import get_settings
 from app.models import Dataset, User
 
 settings = get_settings()
+
+S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "ai-data-analyst-files")
+
+s3_client = boto3.client(
+    "s3",
+    endpoint_url=os.getenv("AWS_ENDPOINT_URL_S3"),
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    region_name=os.getenv("AWS_REGION", "ap-southeast-1"),
+)
 
 ALLOWED_EXTENSIONS = {"csv", "xlsx", "xls"}
 MAX_FILE_SIZE = settings.max_upload_size_bytes
@@ -159,6 +172,7 @@ def column_metadata(df: pd.DataFrame) -> list[dict]:
 def process_upload(user: User, db: Session, file: UploadFile) -> Dataset:
     original_filename = file.filename or "uploaded_file"
     extension = original_filename.rsplit(".", 1)[-1].lower() if "." in original_filename else ""
+
     if extension not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
@@ -169,27 +183,38 @@ def process_upload(user: User, db: Session, file: UploadFile) -> Dataset:
     df = _normalise_dtypes(df)
     df = _infer_dtypes(df)
 
-    # Persist file on disk
-    user_dir = settings.STORAGE_DIR / str(user.id)
-    user_dir.mkdir(parents=True, exist_ok=True)
-    stored_filename = f"{uuid.uuid4().hex}.{extension}"
-    target = user_dir / stored_filename
-
+    # Store the original file in Neon Object Storage
     file.file.seek(0)
-    with open(target, "wb") as out:
-        out.write(file.file.read())
+    contents = file.file.read()
+
+    stored_filename = f"{uuid.uuid4().hex}.{extension}"
+    object_key = f"datasets/{user.id}/{stored_filename}"
+
+    try:
+        s3_client.put_object(
+            Bucket=S3_BUCKET_NAME,
+            Key=object_key,
+            Body=contents,
+            ContentType=file.content_type or "application/octet-stream",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to store dataset: {exc}",
+        )
 
     dataset = Dataset(
         user_id=user.id,
         original_filename=original_filename,
-        stored_filename=stored_filename,
+        stored_filename=object_key,
         file_format=extension,
-        file_size_bytes=target.stat().st_size,
+        file_size_bytes=len(contents),
         row_count=len(df),
         column_count=len(df.columns),
         columns=column_metadata(df),
         status="ready",
     )
+
     db.add(dataset)
     db.commit()
     db.refresh(dataset)
@@ -197,22 +222,40 @@ def process_upload(user: User, db: Session, file: UploadFile) -> Dataset:
 
 
 def load_dataframe(dataset: Dataset) -> pd.DataFrame:
-    path = get_dataset_path(dataset)
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Dataset file not found on disk.")
     try:
+        response = s3_client.get_object(
+            Bucket=S3_BUCKET_NAME,
+            Key=dataset.stored_filename,
+        )
+        file_bytes = response["Body"].read()
+
         if dataset.file_format == "csv":
-            delimiter = _detect_delimiter(path.read_bytes())
+            delimiter = _detect_delimiter(file_bytes)
             try:
-                df = pd.read_csv(path, delimiter=delimiter, encoding="utf-8", on_bad_lines="error")
+                df = pd.read_csv(
+                    io.BytesIO(file_bytes),
+                    delimiter=delimiter,
+                    encoding="utf-8",
+                    on_bad_lines="error",
+                )
             except UnicodeDecodeError:
-                df = pd.read_csv(path, delimiter=delimiter, encoding="latin-1", on_bad_lines="error")
+                df = pd.read_csv(
+                    io.BytesIO(file_bytes),
+                    delimiter=delimiter,
+                    encoding="latin-1",
+                    on_bad_lines="error",
+                )
         else:
             df = pd.read_excel(
-                path, engine="xlrd" if dataset.file_format == "xls" else "openpyxl"
+                io.BytesIO(file_bytes),
+                engine="xlrd" if dataset.file_format == "xls" else "openpyxl",
             )
+
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to read stored dataset: {exc}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to read stored dataset: {exc}",
+        )
 
     df = _normalise_dtypes(df)
     df = _infer_dtypes(df)
